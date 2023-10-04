@@ -1,0 +1,65 @@
+---
+title: "Looker API Explore"
+author: "claire guilmette"
+date: '2022-08-29'
+output: html_document
+---
+
+
+```{r}
+
+# Load lookr library.
+library(lookr)
+
+#install lookr from git
+#devtools::install_github("looker/lookr", ref = "api-4.0")
+
+
+```
+
+
+Lookup variables
+
+https://help.bitfocus.com/customer-sql-data-model
+
+```{r}
+# Connect to Looker API.
+sdk <- LookerSDK$new(configFile = '/Volumes/DEPT_SHARES/Impact/API Keys/Looker_API.ini')
+
+# Query a modle
+CONNECTION <- "wa_connection_model"
+
+# Explore name, for 
+VIEW = "base"
+
+FIELDS <- c(
+  "clients.id",
+  "clients.added_date",
+  "clients.first_name",
+  "clients.birth_date",
+  "enrollments.id",
+  "client_assessments.id",
+  "clients.ref_agency")
+
+results <- sdk$runInlineQuery(
+  model = CONNECTION,
+  view = VIEW,
+  fields = FIELDS,
+  limit = 500,
+  queryTimezone = "America/Los_Angeles"
+)
+
+# Convert list of list to dataframe.
+df <- as.data.frame(do.call(rbind, results))
+
+
+
+
+
+
+
+```
+
+
+```
+

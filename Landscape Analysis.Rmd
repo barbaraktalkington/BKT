@@ -1,0 +1,141 @@
+---
+title: "Landscape Analysis"
+author: "claire guilmette"
+date: '2022-08-25'
+output: html_document
+---
+
+libraries
+
+```{r}
+
+library(dplyr)
+library(tidyverse)
+library(udpipe)
+library(janitor)
+library(stringr)
+
+
+```
+
+
+Make sure you retrieve an apikey from smartsheet
+
+```{r}
+
+#need to figure out a way to hide apikeys in Renviron or something... 
+
+apikey <- "7fJHlrOiWqtMfdIqDTDVyP0HXB7Z8ghxpjhFA"
+sheetid <- "8305335338329988"
+
+getsheet <- function(sheetid, apikey) {
+  authstring <- stringr::str_glue("Bearer {apikey}")
+  urlstring <- stringr::str_glue('https://api.smartsheet.com/2.0/sheets/{sheetid}')
+  
+  h <- curl::new_handle()
+  curl::handle_setheaders(h,
+                    "Authorization" = authstring,
+                    "Accept" = "text/csv")
+  
+  tmp <- tempfile()
+  curl::curl_download(urlstring, destfile = tmp, handle = h)
+  rawdata <- readr::read_csv(tmp, show_col_types = FALSE)
+}
+
+
+landscape0 <- getsheet(sheetid, apikey)
+
+```
+
+clean for analysis
+
+```{r}
+
+landscape0$uid <- unique_identifier(landscape0, fields= c("Service Provider Organization", "Program Name"), start_from = 100)
+
+landscape <- clean_names(landscape0)
+
+landscape <- landscape %>%
+  select(-(notes)) %>%
+  filter(!is.na(service_provider_organization)) %>%
+  mutate(families_all_under18 = ifelse(grepl("Families with Children under 18", household_type), 1,0),
+         families_at_least_one_under18 = ifelse(grepl("Families with Children at least one under 18", household_type), 1,0),
+         youth = ifelse(grepl("Youth", household_type), 1,0),
+         young_adult = ifelse(grepl("Young Adult (18-21) or (18-25)",household_type),1,0),
+         single_men = ifelse(grepl("Single Adult Men", household_type),1,0),
+         single_women = ifelse(grepl("Single Adult Women", household_type),1,0),
+         single_adults_all = ifelse(grepl("Single Adults (All Genders)", household_type),1,0),
+         single_adults_couples = ifelse(grepl("Single Adults and Couples", household_type),1,0),
+         women_children = ifelse(grepl("Women and Children", household_type),1,0),
+         unclear_householdtype = ifelse(grepl("Unclear", household_type),1,0)) %>%
+  select(-(household_type)) %>%
+  mutate(sub.pop_general = ifelse(grepl("General - No additional specificity", sub_population_type), 1,0),
+           sub.pop_psych_treatment = ifelse(grepl("Adults exiting psychiatric treatment", sub_population_type), 1,0),
+           sub.pop_chronic = ifelse(grepl("Coming from chronic homelessness", sub_population_type), 1,0),
+           sub.pop_asian_nhopi = ifelse(grepl("Asian American and Pacific islander Serving",sub_population_type),1,0),
+           sub.pop_deaf = ifelse(grepl("Deaf", sub_population_type),1,0),
+           sub.pop_disabled = ifelse(grepl("Disabled", sub_population_type),1,0),
+           sub.pop_children_medical = ifelse(grepl("Children with medical complexity", sub_population_type),1,0),
+           sub.pop_cps_involved = ifelse(grepl("Children removed by CPS and about to be removed", sub_population_type),1,0),
+           sub.pop_HIVplus = ifelse(grepl("HIV+", sub_population_type),1,0),
+           sub.pop_HIVplus_hhmember = ifelse(grepl("HIV+ or the significant other/family of a HIV+ partner", sub_population_type),1,0),
+           sub.pop_longterm_hmls_medical = ifelse(grepl("Adults experiencing long-term homelessness and critical medical challenges", sub_population_type), 1,0),
+         sub.pop_high_needs_fams = ifelse(grepl("High Needs families", sub_population_type), 1,0),
+           sub.pop_recovery = ifelse(grepl("In pro-active recovery drugs, alcohol, or behavioral health challenges", sub_population_type), 1,0),
+           sub.pop_incarcerated = ifelse(grepl("Returning from incarceration",sub_population_type),1,0),
+           sub.pop_sud = ifelse(grepl("Individuals living with Substance Use Disorder", sub_population_type),1,0),
+           sub.pop_phys_disabled = ifelse(grepl("Individuals living with Physical Disabilities", sub_population_type),1,0),
+           sub.pop_serious_mh = ifelse(grepl("Individuals with co-occuring SUD and mental illness", sub_population_type),1,0),
+           sub.pop_vets = ifelse(grepl("Veterans", sub_population_type),1,0),
+           sub.pop_sud_and_mh = ifelse(grepl("HIV+", sub_population_type),1,0),
+           sub.pop_div_from_hospital = ifelse(grepl("Individuals with co-occuring SUD and mental illness", sub_population_type),1,0),
+           sub.pop_longterm_hmls_medical = ifelse(grepl("Adults experiencing long-term homelessness and critical medical challenges", sub_population_type), 1,0),
+          sub.pop_high_needs_fams = ifelse(grepl("High Needs families", sub_population_type), 1,0),
+           sub.pop_recovery = ifelse(grepl("In pro-active recovery drugs, alcohol, or behavioral health challenges", sub_population_type), 1,0),
+           sub.pop_incarcerated = ifelse(grepl("Returning from incarceration",sub_population_type),1,0),
+           sub.pop_sud = ifelse(grepl("Individuals living with Substance Use Disorder", sub_population_type),1,0),
+           sub.pop_phys_disabled = ifelse(grepl("Individuals living with Physical Disabilities", sub_population_type),1,0),
+           sub.pop_serious_mh = ifelse(grepl("Individuals with co-occuring SUD and mental illness", sub_population_type),1,0),
+           sub.pop_vets = ifelse(grepl("Veterans", sub_population_type),1,0),
+           sub.pop_sud_and_mh = ifelse(grepl("HIV+", sub_population_type),1,0),
+           sub.pop_div_from_hospital = ifelse(grepl("Diversion from a hospital", sub_population_type),1,0),
+           sub.pop_longterm_hmls_medical = ifelse(grepl("Serious and persistent mental illness (SPMI) and a substance use disorder (SUD) or chronic physical health condition", sub_population_type), 1,0),
+          sub.pop_lgbtq = ifelse(grepl("LGBTQ+", sub_population_type), 1,0),
+           sub.pop_aian = ifelse(grepl("Native American Serving", sub_population_type), 1,0),
+           sub.pop_RVs = ifelse(grepl("Vehicle residents in RVs",sub_population_type),1,0),
+           sub.pop_cars = ifelse(grepl("Vehicle residents in passenger vehicles", sub_population_type),1,0),
+           sub.pop_black_aa = ifelse(grepl("Black/African-American Serving", sub_population_type),1,0),
+           sub.pop_dv = ifelse(grepl("Domestic Violence", sub_population_type),1,0),
+           sub.pop_vets = ifelse(grepl("Veterans", sub_population_type),1,0),
+           sub.pop_youth_under17 = ifelse(grepl("Youth (7-17)", sub_population_type),1,0),
+           sub.pop_youth_12_17 = ifelse(grepl("Youth (12- 17)", sub_population_type),1,0),
+         sub.pop_youth_16_17 = ifelse(grepl("Youth (16-17)", sub_population_type), 1,0),
+           sub.pop_acute = ifelse(grepl("Acute and post-acute care", sub_population_type), 1,0),
+           sub.pop_bipoc = ifelse(grepl("BIPOC general serving",sub_population_type),1,0),
+           sub.pop_cars = ifelse(grepl("Vehicle residents in passenger vehicles", sub_population_type),1,0),
+           sub.pop_black_aa = ifelse(grepl("Black/African-American Serving", sub_population_type),1,0),
+           sub.pop_dv = ifelse(grepl("Domestic Violence", sub_population_type),1,0),
+           sub.pop_com_sex_exploit = ifelse(grepl("Commercial Sexual Exploitation", sub_population_type),1,0),
+           sub.pop_nontraditonal_families = ifelse(grepl("Including non-traditional and extended families, and families with teen-aged male", sub_population_type),1,0),
+           sub.pop_law_involved = ifelse(grepl("Law Enforcement involved adults", sub_population_type),1,0),
+         sub.pop_youth_immigrant_refugee = ifelse(grepl("Immigrant + Refugee", sub_population_type), 1,0),
+           sub.pop_age_55plus = ifelse(grepl("Older adults (55+)", sub_population_type), 1,0),
+           sub.pop_age_50plus = ifelse(grepl("Older adults (50+)",sub_population_type),1,0),
+           sub.pop_medical_support = ifelse(grepl("Medical Supports", sub_population_type),1,0),
+           sub.pop_open_internal_only = ifelse(grepl("Only Open to Internal", sub_population_type),1,0),
+           sub.pop_guests = ifelse(grepl("Guests/Residents/Participants", sub_population_type),1,0)) %>%
+    select(-(sub_population_type))
+
+  
+
+```
+
+SUD treatment
+
+Yes
+Covered by Behavioral Health Specialist
+Referral
+Partnering Agency
+No
+Unclear
+
