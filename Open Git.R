@@ -1,5 +1,5 @@
-library(usethis)
-library(gitcreds)
+install.packages("usethis")
+install.packages("gitcreds")
 
 #create personal access token
 create_github_token()
